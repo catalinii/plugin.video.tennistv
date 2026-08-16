@@ -16,7 +16,7 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "version=$(grep -oE 'version=\"[^\"]+\"' addon.xml | head -1 | cut -d'\"' -f2)" >> $GITHUB_OUTPUT
+        run: echo "version=$(python3 -c 'import xml.etree.ElementTree as ET; print(ET.parse("addon.xml").getroot().get("version"))')" >> $GITHUB_OUTPUT
 
       - name: Check if tag exists
         id: check_tag
