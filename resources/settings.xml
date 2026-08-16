@@ -4,4 +4,7 @@
         <setting id="username" type="text" label="Email" default=""/>
         <setting id="password" type="text" option="hidden" label="Password" default=""/>
     </category>
+    <category label="Playback">
+        <setting id="quality" type="enum" label="Stream quality" values="1080p|720p|480p|360p" default="1"/>
+    </category>
 </settings>

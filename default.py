@@ -186,7 +186,13 @@ def play():
 
     client = get_client()
     try:
-        stream_url = client.stream_url(media_id)
+        quality_map = ["1080", "720", "480", "360"]
+        try:
+            idx = int(ADDON.getSetting("quality") or "1")
+        except ValueError:
+            idx = 1
+        quality = quality_map[idx] if 0 <= idx < len(quality_map) else "720"
+        stream_url = client.stream_variant_url(media_id, quality=quality)
     except api.TennisTVAuthError as exc:
         log("Auth error: %s" % exc)
         notify(str(exc))
