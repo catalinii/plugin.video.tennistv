@@ -261,7 +261,7 @@ def show_completed_matches():
     client = get_client()
     try:
         matches = client.completed_matches()
-        videos = client.replay_videos(page_size=100)
+        videos = client.replay_videos(page_size=100) + client.match_highlight_videos(page_size=100)
     except Exception as exc:
         log("Failed to load completed matches: %s" % exc)
         notify("Failed to load completed matches.")
