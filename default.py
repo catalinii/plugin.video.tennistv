@@ -261,7 +261,6 @@ def show_completed_matches():
     client = get_client()
     try:
         matches = client.completed_matches()
-        videos = client.replay_videos(page_size=100) + client.match_highlight_videos(page_size=100)
     except Exception as exc:
         log("Failed to load completed matches: %s" % exc)
         notify("Failed to load completed matches.")
@@ -269,22 +268,40 @@ def show_completed_matches():
         return
 
     for match in matches:
-        title = api.match_title(match)
-        plot = (match.get("metadata") or {}).get("description") or ""
-        score = api.match_scores(match)
-        label = title
-        if score:
-            label = "%s  [COLOR grey][%s][/COLOR]" % (title, score)
+        media_id = match.get("mediaId")
+        if media_id:
+            title = match.get("title") or "Untitled Match"
+            plot = match.get("description") or ""
+            dur_sec = match.get("duration") or (match.get("additionalInfo") or {}).get("VideoDuration") or 0
+            try:
+                duration = int(dur_sec)
+            except (ValueError, TypeError):
+                duration = 0
+            date_str = (match.get("date") or "")[:10]
+            dur_str = api.format_duration(duration)
 
-        video = api.find_video_for_match(match, videos)
-        if video and video.get("mediaId"):
-            media_id = video.get("mediaId")
+            label = title
+            details = []
+            if date_str:
+                details.append(date_str)
+            if dur_str:
+                details.append(dur_str)
+            if details:
+                label = "%s  [COLOR grey][%s][/COLOR]" % (title, " | ".join(details))
+
             add_video_item(
                 label,
                 build_url(mode="play", media_id=media_id, title=title),
                 plot=plot,
+                duration=duration,
             )
         else:
+            title = api.match_title(match)
+            plot = (match.get("metadata") or {}).get("description") or ""
+            score = api.match_scores(match)
+            label = title
+            if score:
+                label = "%s  [COLOR grey][%s][/COLOR]" % (title, score)
             add_info_item(label, plot)
 
     if not matches:
