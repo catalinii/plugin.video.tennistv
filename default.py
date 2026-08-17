@@ -293,6 +293,19 @@ def show_completed_matches():
     xbmcplugin.endOfDirectory(HANDLE)
 
 
+def _parse_quality(setting_val):
+    quality_map = ["1080", "720", "480", "360"]
+    s = (setting_val or "").strip().lower()
+    if s.endswith("p"):
+        return s[:-1]
+    if s.isdigit():
+        idx = int(s)
+        if 0 <= idx < len(quality_map):
+            return quality_map[idx]
+        return s
+    return "1080"
+
+
 def play():
     media_id = ARGS.get("media_id", [None])[0]
     title = ARGS.get("title", ["Tennis TV"])[0]
@@ -302,13 +315,9 @@ def play():
 
     client = get_client()
     try:
-        quality_map = ["1080", "720", "480", "360"]
-        try:
-            idx = int(ADDON.getSetting("quality") or "1")
-        except ValueError:
-            idx = 1
-        quality = quality_map[idx] if 0 <= idx < len(quality_map) else "720"
-        stream_url = client.stream_variant_url(media_id, quality=quality)
+        setting_val = ADDON.getSetting("quality")
+        quality = _parse_quality(setting_val)
+        stream_url = client.stream_variant_url(media_id, max_bandwidth=20000000, quality=quality)
     except api.TennisTVAuthError as exc:
         log("Auth error: %s" % exc)
         notify(str(exc))
