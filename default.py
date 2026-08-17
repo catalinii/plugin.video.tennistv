@@ -77,6 +77,7 @@ def add_info_item(label, plot=""):
 # ---------------------------------------------------------------------- #
 def show_main_menu():
     add_menu_item("Live Now", build_url(mode="live"))
+    add_menu_item("Match Archive", build_url(mode="recorded"))
     add_menu_item("Upcoming", build_url(mode="upcoming"))
     xbmcplugin.endOfDirectory(HANDLE)
 
@@ -177,6 +178,121 @@ def show_upcoming():
     xbmcplugin.endOfDirectory(HANDLE)
 
 
+def show_recorded_menu():
+    add_menu_item("Full Replays", build_url(mode="replays"))
+    add_menu_item("Match Highlights", build_url(mode="match_highlights"))
+    add_menu_item("Daily Highlights", build_url(mode="daily_highlights"))
+    add_menu_item("Completed Matches", build_url(mode="completed_matches"))
+    xbmcplugin.endOfDirectory(HANDLE)
+
+
+def _show_video_list(fetch_fn, error_msg, empty_msg):
+    client = get_client()
+    try:
+        videos = fetch_fn(client)
+    except Exception as exc:
+        log("%s: %s" % (error_msg, exc))
+        notify(error_msg)
+        xbmcplugin.endOfDirectory(HANDLE)
+        return
+
+    for video in videos:
+        media_id = video.get("mediaId")
+        if not media_id:
+            continue
+        title = video.get("title") or "Untitled Video"
+        plot = video.get("description") or ""
+        dur_sec = video.get("duration") or (video.get("additionalInfo") or {}).get("VideoDuration") or 0
+        try:
+            duration = int(dur_sec)
+        except (ValueError, TypeError):
+            duration = 0
+
+        date_str = (video.get("date") or "")[:10]
+        dur_str = api.format_duration(duration)
+
+        label = title
+        details = []
+        if date_str:
+            details.append(date_str)
+        if dur_str:
+            details.append(dur_str)
+        if details:
+            label = "%s  [COLOR grey][%s][/COLOR]" % (title, " | ".join(details))
+
+        add_video_item(
+            label,
+            build_url(mode="play", media_id=media_id, title=title),
+            plot=plot,
+            duration=duration,
+        )
+
+    if not videos:
+        add_info_item(empty_msg)
+
+    xbmcplugin.endOfDirectory(HANDLE)
+
+
+def show_replays():
+    _show_video_list(
+        lambda c: c.replay_videos(),
+        "Failed to load full replays.",
+        "No replays available right now.",
+    )
+
+
+def show_match_highlights():
+    _show_video_list(
+        lambda c: c.match_highlight_videos(),
+        "Failed to load match highlights.",
+        "No match highlights available right now.",
+    )
+
+
+def show_daily_highlights():
+    _show_video_list(
+        lambda c: c.daily_highlight_videos(),
+        "Failed to load daily highlights.",
+        "No daily highlights available right now.",
+    )
+
+
+def show_completed_matches():
+    client = get_client()
+    try:
+        matches = client.completed_matches()
+        videos = client.replay_videos(page_size=100)
+    except Exception as exc:
+        log("Failed to load completed matches: %s" % exc)
+        notify("Failed to load completed matches.")
+        xbmcplugin.endOfDirectory(HANDLE)
+        return
+
+    for match in matches:
+        title = api.match_title(match)
+        plot = (match.get("metadata") or {}).get("description") or ""
+        score = api.match_scores(match)
+        label = title
+        if score:
+            label = "%s  [COLOR grey][%s][/COLOR]" % (title, score)
+
+        video = api.find_video_for_match(match, videos)
+        if video and video.get("mediaId"):
+            media_id = video.get("mediaId")
+            add_video_item(
+                label,
+                build_url(mode="play", media_id=media_id, title=title),
+                plot=plot,
+            )
+        else:
+            add_info_item(label, plot)
+
+    if not matches:
+        add_info_item("No completed matches found.")
+
+    xbmcplugin.endOfDirectory(HANDLE)
+
+
 def play():
     media_id = ARGS.get("media_id", [None])[0]
     title = ARGS.get("title", ["Tennis TV"])[0]
@@ -229,6 +345,16 @@ def router():
     mode = ARGS.get("mode", [None])[0]
     if mode == "live":
         show_live()
+    elif mode == "recorded":
+        show_recorded_menu()
+    elif mode == "replays":
+        show_replays()
+    elif mode == "match_highlights":
+        show_match_highlights()
+    elif mode == "daily_highlights":
+        show_daily_highlights()
+    elif mode == "completed_matches":
+        show_completed_matches()
     elif mode == "upcoming":
         show_upcoming()
     elif mode == "play":
