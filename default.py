@@ -314,13 +314,14 @@ def _parse_quality(setting_val):
     quality_map = ["1080", "720", "480", "360"]
     s = (setting_val or "").strip().lower()
     if s.endswith("p"):
-        return s[:-1]
+        s = s[:-1]
+    if s in quality_map:
+        return s
     if s.isdigit():
         idx = int(s)
         if 0 <= idx < len(quality_map):
             return quality_map[idx]
-        return s
-    return "1080"
+    return "720"
 
 
 def play():
