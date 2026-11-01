@@ -354,7 +354,10 @@ def play():
         item.setMimeType("application/vnd.apple.mpegurl")
         item.setContentLookup(False)
         item.setProperty("inputstream", "inputstream.adaptive")
-        item.setProperty("inputstream.adaptive.manifest_type", "hls")
+        headers = "User-Agent=%s&Accept-Encoding=gzip" % api.USER_AGENT
+        item.setProperty("inputstream.adaptive.manifest_headers", headers)
+        item.setProperty("inputstream.adaptive.stream_headers", headers)
+        item.setProperty("inputstream.adaptive.license_key", "|" + headers)
     else:
         item.setMimeType("application/vnd.apple.mpegurl")
 
